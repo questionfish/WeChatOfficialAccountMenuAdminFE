@@ -51,7 +51,8 @@
 	var button=obj.menu.button;//一级菜单
 	//显示异常
 	if(obj.errcode){
-		$('#abnormalModal').modal('show');
+		layer.msg('数据异常！');
+		return;
 	}
 	//一级菜单对象
 	function parents(param){
@@ -258,7 +259,29 @@
 		var liNum=$(this).parents('.custom-menu-view__menu').find('li').length;
 		
 		if(liNum<=1){
-			$('#reminderModal').modal('show');
+			layerComfirm = layer.confirm('添加子菜单后，一级菜单的内容将被清除。确定添加子菜单？', {
+				btn: ['是', '否']
+				} , function() {
+					layer.close(layerComfirm);
+					var ul=$('.custom-menu-view__menu')[colIndex].getElementsByTagName('ul')[0];
+					var li=document.createElement('li');
+					var div=document.createElement('div');
+					var Text=document.createTextNode('新建子菜单');
+					li.className="custom-menu-view__menu__sub__add";
+					div.className="text-ellipsis";
+					div.appendChild(Text);
+					li.appendChild(div);
+					ul.insertBefore(li,ul.childNodes[0]);
+					setLiId();
+					delete button[colIndex].type;
+					delete button[colIndex].key;
+					delete button[colIndex].url;
+					$('#reminderModal').modal('hide');
+
+					setSubText()
+				} , function () {
+				}
+			);
 		}else{
 			if(liNum<6){
 				$(this).parent().parent().before(customLi);
@@ -271,25 +294,7 @@
 		$('#radioGroup').show();
 		setSubText()
 	});
-	//确定添加子菜单事件
-	$('.reminder').click(function(){
-		var ul=$('.custom-menu-view__menu')[colIndex].getElementsByTagName('ul')[0];
-		var li=document.createElement('li');
-		var div=document.createElement('div');
-		var Text=document.createTextNode('新建子菜单');
-		li.className="custom-menu-view__menu__sub__add";
-		div.className="text-ellipsis";
-		div.appendChild(Text);
-		li.appendChild(div);
-		ul.insertBefore(li,ul.childNodes[0]);
-		setLiId();
-		delete button[colIndex].type;
-		delete button[colIndex].key;
-		delete button[colIndex].url;
-		$('#reminderModal').modal('hide');
 
-		setSubText()
-	});
 	//对新添加二级菜单添加id
 	function setLiId(){
 		var prev=$('.custom-menu-view__menu')[colIndex].getElementsByTagName('i')[0].parentNode.parentNode.previousSibling;
