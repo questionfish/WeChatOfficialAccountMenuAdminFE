@@ -1,0 +1,2 @@
+# WeChatOfficialAccountMenuAdminFE
+仿微信公众号菜单管理后台前端demo，素材网站下载，修复部分bug
