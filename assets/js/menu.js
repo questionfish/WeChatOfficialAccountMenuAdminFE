@@ -494,7 +494,9 @@
 					sortableSubMenu(n+1,sortIndex);
 					//$('.text-ellipsis>i').parents('li').show();
 					var i_el=addSubMenuBtn;
-					$('.custom-menu-view__menu__sub').eq(n).append(i_el);
+					if(button[n].sub_button.length < 5) {
+                        $('.custom-menu-view__menu__sub').eq(n).append(i_el);
+                    }
 				})(n);
 				if(ix==1){
 					$('.custom-menu-view__menu').css({
