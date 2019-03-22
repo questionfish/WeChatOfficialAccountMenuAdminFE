@@ -741,6 +741,7 @@
 	});
 	//保存
 	function saveAjax(){
+		layer.msg(JSON.stringify(obj));
 		$.ajax({
     		type: "POST",
 			url: "<%=path%>/menu/saveButton.html",
