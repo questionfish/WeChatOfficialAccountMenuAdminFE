@@ -276,7 +276,6 @@
 					delete button[colIndex].type;
 					delete button[colIndex].key;
 					delete button[colIndex].url;
-					$('#reminderModal').modal('hide');
 
 					setSubText()
 				} , function () {
