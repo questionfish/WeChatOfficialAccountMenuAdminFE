@@ -563,12 +563,18 @@
 		if(sortIndex){
 			new Sortable(document.getElementById('menuStage_2_'+m), {
 				animation: 300, //动画参数
-				disabled: false, 
-			});
+				disabled: false,
+                onEnd: function (/**Event*/evt) {
+					console.log(evt);
+                }
+            });
 		}else{
 			var el = document.getElementById('menuStage_2_'+m);
 			var sortable = Sortable.create(el,{
 				disabled: true,
+                onEnd: function (/**Event*/evt) {
+                    console.log(evt);
+                }
 			});
 			sortable.destroy(); 
 		}
