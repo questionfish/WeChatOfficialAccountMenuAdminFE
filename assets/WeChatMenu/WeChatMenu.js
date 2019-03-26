@@ -17,6 +17,7 @@
         var product = factory();
         window["Menu"] = product[0];
         window["Button"] = product[1];
+        window["MenuView"] = product[2];
     }
 })(function weChatMenuFactory() {
     "use strict";
@@ -292,7 +293,7 @@
      * @param oldIdx
      * @param newIdx
      */
-    Button.prototype.moveSubButton = function (oldIdx, newIdx) {
+    Button.prototype.moveChild = function (oldIdx, newIdx) {
         if(this.isLeaf() || oldIdx >= this.sub_button.length || newIdx >= this.sub_button.length){
             throw new Error('Sub button idx out of range.');
         }
@@ -308,6 +309,7 @@
      * @constructor
      */
     function Menu(button) {
+        this.isMenu = true;
         if(button.isArr()) {
             if(this && this._checkButtons(button)){
                 this.button = button;
@@ -438,10 +440,181 @@
             throw new Error('Button topIdx is not top button');
         }
 
-        this.button[topIdx].moveSubButton(oldSubIdx, newTopIdx);
+        this.button[topIdx].moveChild(oldSubIdx, newTopIdx);
+    };
+
+    var addSubBtnElCls = 'custom-menu-view__menu__sub__add text-ellipsis';
+    var addTopBtnElCls = 'custom-menu-view__menu glyphicon glyphicon-plus text-info iBtn';
+    var subBtnElCls = 'custom-menu-view__menu__sub__add';
+    var topBtnElCls = 'custom-menu-view__menu';
+    var topBtnNameElCls = 'text-ellipsis';
+    var subBtnUlCls = 'custom-menu-view__menu__sub';
+    var topBtnUlCls = 'custom-menu-view__footer__right';
+    var topBtnUlId = 'menu-view';
+
+    var addSubBtnElTag = 'li';
+    var addTopBtnElTag = 'div';
+    var subBtnElTag = 'li';
+    var subBtnUlTag = 'ul';
+    var topBtnElTag = 'div';
+    var topBtnNameElTag = 'div';
+
+    var idxAttrName = 'wechat-menu-idx';
+    var idxDelimiter = '-';
+    var addBtnAttrName = 'wechat-menu-add-btn';
+
+    Object.prototype.setMenuIdx = function (idx1, idx2) {
+        var idx = idx1 + (idx2 !== undefined ? idxDelimiter + idx2 : '');
+        this.setAttribute(idxAttrName, idx);
+    };
+
+    Object.prototype.getMenuIdx = function () {
+        var idx = this.getAttribute(idxAttrName);
+        return idx.split(idxDelimiter);
+    };
+
+    Object.prototype.isAddBtn = function (is) {
+        if(is !== undefined){
+            if(is === true){
+                this.toggleAttribute(addBtnAttrName, true);
+            } else {
+                this.toggleAttribute(addBtnAttrName, false);
+            }
+        }
+        return this.hasAttribute(addBtnAttrName);
+    };
+
+    function MenuView(menu) {
+        if(!menu.isMenu){
+            throw new Error('Menu must be a object of Menu');
+        }
+        this.menu = menu;
+
+        this.topBtnUl = document.getElementById(topBtnUlId);
+        this.topBtnUl.className = topBtnUlCls;
+
+        for (var i = 0; i < menu.button.length; ++i ) {
+            var topBtn = this.createTopBtn(menu.button[i].name);
+            var subBtnUl = this.createSubBtnUl();
+            topBtn.appendChild(subBtnUl);
+            for (var j = 0; menu.button[i].sub_button && j < menu.button[i].sub_button.length; ++j){
+                subBtnUl.appendChild(this.createSubBtn(menu.button[i].sub_button[j].name));
+            }
+            if(!menu.button[i].sub_button || menu.button[i].sub_button.length < 5) {
+                subBtnUl.appendChild(this.createAddSubBtn());
+            }
+            this.topBtnUl.appendChild(topBtn);
+        }
+        if(menu.button.length < 3) {
+            this.topBtnUl.appendChild(this.createAddTopBtn());
+        }
+        this.reIndex();
+    }
+
+    MenuView.prototype.createTopBtn = function(name) {
+        var topBtn = document.createElement(topBtnElTag);
+        topBtn.className = topBtnElCls;
+        var topBtnNameEl = document.createElement(topBtnNameElTag);
+        topBtnNameEl.className = topBtnNameElCls;
+        topBtnNameEl.innerHTML = name;
+        topBtn.appendChild(topBtnNameEl);
+        return topBtn;
+    };
+
+    MenuView.prototype.createSubBtnUl = function() {
+        var subBtnUl = document.createElement(subBtnUlTag);
+        subBtnUl.className = subBtnUlCls;
+        return subBtnUl;
+    };
+
+    MenuView.prototype.createSubBtn = function(name) {
+        var subBtnEl = document.createElement(subBtnElTag);
+        subBtnEl.className = subBtnElCls;
+        subBtnEl.innerHTML = name;
+        return subBtnEl;
+    };
+
+    MenuView.prototype.createAddSubBtn = function() {
+        var addSubBtnEl = document.createElement(addSubBtnElTag);
+        addSubBtnEl.className = addSubBtnElCls;
+        addSubBtnEl.isAddBtn(true);
+        return addSubBtnEl;
+    };
+
+    MenuView.prototype.createAddTopBtn = function() {
+        var addTopBtnEl = document.createElement(addTopBtnElTag);
+        addTopBtnEl.className = addTopBtnElCls;
+        addTopBtnEl.isAddBtn(true);
+        this.topBtnUl.appendChild(addTopBtnEl);
+        return addTopBtnEl;
+    };
+
+    MenuView.prototype._getSubBtnUl = function(topBtnIdx) {
+        return this.topBtnUl.children[topBtnIdx].children[1];
+    };
+
+    MenuView.prototype.reIndex = function(topBtnUl){
+        for (var i = 0; i < this.topBtnUl.children.length; ++i){
+            var topBtnEl = this.topBtnUl.children[i];
+            if(topBtnEl.isAddBtn()) continue;
+            topBtnEl.setMenuIdx(i);
+            var subBtnUl = this._getSubBtnUl(i);
+            for (var j = 0; subBtnUl && j < subBtnUl.children.length; ++j){
+                if(subBtnUl.children[j].isAddBtn()) continue;
+                subBtnUl.children[j].setMenuIdx(i, j);
+            }
+        }
+    };
+
+    MenuView.prototype.sortable = function(newStatus){
+        if(newStatus) {
+            this._displayAddBtnEl(false);
+            var that = this;
+            this.sortableUlArr = [];
+            this.sortableUlArr.push(new Sortable(this.topBtnUl, {
+                animation: 300,
+                disabled: false,
+                onEnd: function (evt) {
+                    that.menu.moveTopButton(evt.oldIndex, evt.newIndex);
+                    that.reIndex();
+                }
+            }));
+            for (var i = 0; i < this.topBtnUl.children.length; ++i){
+                var subBtnUl = this._getSubBtnUl(i);
+                if(subBtnUl && subBtnUl.children.length > 0) {
+                    this.sortableUlArr.push(new Sortable(subBtnUl, {
+                        animation: 300,
+                        disabled: false,
+                        onEnd: function (evt) {
+                            that.menu.moveSubButton(evt.item.getMenuIdx()[0], evt.oldIndex, evt.newIndex);
+                            that.reIndex();
+                        }
+                    }));
+                }
+            }
+        } else {
+            var el = $('.custom-menu-view__footer__right')[0];
+            var sortableUl;
+            while (this.sortableUlArr && (sortableUl = this.sortableUlArr.pop())) {
+                sortableUl.destroy();
+            }
+            this._displayAddBtnEl(true);
+        }
+    };
+
+    MenuView.prototype._displayAddBtnEl = function (display) {
+        if(this.topBtnUl.lastChild.isAddBtn()){
+            this.topBtnUl.lastChild.style.display = display ? null: 'none';
+        }
+        for (var i = 0; this.topBtnUl.children && i < this.topBtnUl.children.length; ++i){
+            var subBtnUl = this._getSubBtnUl(i);
+            if(subBtnUl && subBtnUl.lastChild.isAddBtn()){
+                subBtnUl.lastChild.style.display = display ? null: 'none';
+            }
+        }
     };
 
     // Export
     Menu.version = '1.0.1';
-    return [Menu, Button];
+    return [Menu, Button, MenuView];
 });
