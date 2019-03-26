@@ -254,7 +254,6 @@
     Button.prototype.toObj = function () {
         var resObj = {
             name: this.name,
-            type: this.type,
         };
         Object.assign(resObj, this.getProps());
         return resObj;
@@ -309,8 +308,22 @@
      * @constructor
      */
     function Menu(button) {
-        this._checkButtons(button);
-        this.button = button;
+        if(button.isArr()) {
+            if(this && this._checkButtons(button)){
+                this.button = button;
+            } else {
+                this._fillWithObject(button);
+            }
+        } else if(typeof button === 'string'){
+            var menuObj = JSON.parse(button);
+            var buttonObj;
+            if(menuObj.button) {
+                buttonObj = menuObj.button;
+            } else {
+                buttonObj = menuObj;
+            }
+            this._fillWithObject(buttonObj);
+        }
     }
 
     /**
@@ -320,13 +333,28 @@
      * @private
      */
     Menu.prototype._checkButtons = function (button) {
-        var err = new Error('Button list must be an array of Button');
-        if (!button.isArr()) {
-            throw err;
-        }
         for (var i = 0; i < button.length; ++i) {
             if (!button[i].isButton) {
-                throw err;
+                return false
+            }
+        }
+        return true;
+    };
+
+    Menu.prototype._fillWithObject = function (button) {
+        this.button = [];
+        for (var i = 0; i < button.length; ++i) {
+            if(!button[i].type && button[i].sub_button && button[i].sub_button.isArr()) {
+                button[i].type = 'top';
+                var topBtnSubBtn = [];
+                for (var j = 0; j < button[i].sub_button.length; ++j){
+                    var subBtnInfo = button[i].sub_button[j];
+                    var subBtn = new Button(subBtnInfo.name, subBtnInfo.type, subBtnInfo);
+                    topBtnSubBtn.push(subBtn);
+                }
+                this.button.push(new Button(button[i].name, button[i].type, {sub_button: topBtnSubBtn}));
+            } else {
+                this.button.push(new Button(button[i].name, button[i].type, button[i]));
             }
         }
     };
