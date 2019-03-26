@@ -450,6 +450,9 @@
     var topBtnNameElCls = 'text-ellipsis';
     var subBtnUlCls = 'custom-menu-view__menu__sub';
     var topBtnUlCls = 'custom-menu-view__footer__right';
+
+    var selectedBtnCls = 'subbutton__actived';
+
     var topBtnUlId = 'menu-view';
 
     var addSubBtnElTag = 'li';
@@ -517,6 +520,10 @@
         var topBtnNameEl = document.createElement(topBtnNameElTag);
         topBtnNameEl.className = topBtnNameElCls;
         topBtnNameEl.innerHTML = name;
+        topBtnNameEl.click = function() {
+            console.log(this);
+            this.a.classList.add(selectedBtnCls);
+        };
         topBtn.appendChild(topBtnNameEl);
         return topBtn;
     };

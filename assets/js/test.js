@@ -68,7 +68,7 @@ function test() {
     m3 = new Menu('{"button":[{"name":"今日歌曲","type":"click","key":"col_2","sub_button":[]},{"name":"菜单","sub_button":[{"name":"搜索","type":"view","url":"http://www.soso.com/","sub_button":[]},{"name":"视频","type":"view","url":"http://v.qq.com/","sub_button":[]},{"name":"赞一下我们","type":"click","key":"col_1","sub_button":[]},{"name":"赞一下我们","type":"click","key":"col_1","sub_button":[]},{"name":"赞一下我们","type":"click","key":"col_1","sub_button":[]}]}]}');
     console.log(m3.toJson());
     mv1 = new MenuView(m3);
-    mv1.sortable(true);
+    // mv1.sortable(true);
     // mv1.sortable(false);
 }
 
