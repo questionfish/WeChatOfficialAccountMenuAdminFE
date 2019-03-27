@@ -22,60 +22,130 @@
 })(function weChatMenuFactory() {
     "use strict";
 
-    /**
-     * 获取所有自定义属性key
-     *
-     * @returns {Array}
-     */
-    Object.prototype.values = function () {
-        var res = [];
-        for (var key in this) {
-            if (this.hasOwnProperty(key)) {
-                res.push(this[key]);
+
+    var
+        /** @const */
+        R_SPACE = /\s+/g,
+        expando = 'Sortable' + (new Date).getTime(),
+
+        IDX_ATTR = 'wechat-menu-idx',
+        IDX_DELIMIT = '-',
+        CREATE_BTN_TAG = 'wechat-menu-btn-add',
+        BTN_TAG = 'wechat-menu-btn',
+        TOP_BTN_TAG = 'wechat-menu-btn-top',
+
+        /** @config */
+        subBtnUlCls = 'custom-menu-view__menu__sub',
+        topBtnUlCls = 'custom-menu-view__footer__right',
+        subBtnElCls = 'custom-menu-view__menu__sub__add',
+        topBtnElCls = 'custom-menu-view__menu',
+        topBtnNameElCls = 'text-ellipsis',
+        createSubBtnElCls = 'custom-menu-view__menu__sub__add text-ellipsis',
+        createTopBtnElCls = 'custom-menu-view__menu',
+        createTopBtnNameElCls = 'glyphicon glyphicon-plus text-info iBtn',
+        selectedBtnElCls = 'subbutton__actived',
+
+        subBtnElTag = 'li',
+        subBtnUlTag = 'ul',
+        topBtnElTag = 'div',
+        topBtnNameElTag = 'div',
+        addSubBtnElTag = 'li',
+        addTopBtnElTag = 'div',
+
+        containerId = 'menu-view',
+
+
+        /** @function */
+        _toggleClass = function (el, name, state) {
+            if (el && name) {
+                if (el.classList) {
+                    el.classList[state ? 'add' : 'remove'](name);
+                } else {
+                    var className = (' ' + el.className + ' ').replace(R_SPACE, ' ').replace(' ' + name + ' ', ' ');
+                    el.className = (className + (state ? ' ' + name : '')).replace(R_SPACE, ' ');
+                }
             }
-        }
-        return res;
-    };
+        },
 
-    /**
-     * 获取所有自定义属性value
-     *
-     * @returns {Array}
-     */
-    Object.prototype.keys = function () {
-        var res = [];
-        for (var key in this) {
-            if (this.hasOwnProperty(key)) {
-                res.push(key);
+        _values = function (obj) {
+            var res = [];
+            for (var key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    res.push(obj[key]);
+                }
             }
-        }
-        return res;
-    };
+            return res;
+        },
 
-    /**
-     * 判断object是否为Array
-     *
-     * @returns {boolean}
-     */
-    Object.prototype.isArr = function () {
-        return typeof this === 'object' && this.constructor.name === 'Array';
-    };
+        // _keys = function(obj){
+        //     var res = [];
+        //     for (var key in obj) {
+        //         if (obj.hasOwnProperty(key)) {
+        //             res.push(key);
+        //         }
+        //     }
+        //     return res;
+        // },
 
-    /**
-     * 菜单按钮类
-     * @property name
-     * @property type
-     * @property key
-     * @property url
-     * @property appid
-     * @property pagepath
-     * @property sub_button
-     *
-     * @param name
-     * @param type
-     * @param props
-     * @constructor
-     */
+        _isArr = function (obj) {
+            return typeof obj === 'object' && obj.constructor.name === 'Array';
+        },
+
+        _isCreateBtn = function (el, state) {
+            if (state) {
+                if (state === true) {
+                    el.toggleAttribute(CREATE_BTN_TAG, true);
+                } else {
+                    el.toggleAttribute(CREATE_BTN_TAG, false);
+                }
+            }
+            return el.hasAttribute(CREATE_BTN_TAG);
+        },
+        _isBtn = function (el, state) {
+            if (state) {
+                if (state === true) {
+                    el.toggleAttribute(BTN_TAG, true);
+                } else {
+                    el.toggleAttribute(BTN_TAG, false);
+                }
+            }
+            return el.hasAttribute(BTN_TAG);
+        },
+        _isTopBtn = function (el, state) {
+            if (state) {
+                if (state === true) {
+                    el.toggleAttribute(TOP_BTN_TAG, true);
+                } else {
+                    el.toggleAttribute(TOP_BTN_TAG, false);
+                }
+            }
+            return el.hasAttribute(TOP_BTN_TAG);
+        },
+
+        _setMenuIdx = function (el, idxTop, idxSub) {
+            el.setAttribute(IDX_ATTR, idxTop + (idxSub !== undefined ? IDX_DELIMIT + idxSub : ''));
+        },
+
+        _getMenuIdx = function (el) {
+            return el.getAttribute(IDX_ATTR).split(IDX_DELIMIT);
+        },
+
+        _err = function (msg) {
+            throw new Error(msg);
+        },
+
+        _extend = function(dst, src) {
+            if (dst && src) {
+                for (var key in src) {
+                    if (src.hasOwnProperty(key)) {
+                        dst[key] = src[key];
+                    }
+                }
+            }
+
+            return dst;
+        };
+
     function Button(name, type, props) {
         this.isButton = true;
         this.typeEnum = {top: 'top', click: 'click', view: 'view', miniprogram: 'miniprogram'};
@@ -92,213 +162,141 @@
         this.setProps(type, props)
     }
 
-    /**
-     * 检查type合法性
-     *
-     * @param type
-     * @returns {boolean}
-     * @private
-     */
-    Button.prototype._checkType = function (type) {
-        if (typeof type !== 'string' || !this.typeEnum[type]) {
-            throw new Error('Type name must be on of ["' + this.typeEnum.values().join('", "') + '"]');
-        }
-        return true;
-    };
+    Button.prototype = {
+        _checkType: function (type) {
+            if (typeof type !== 'string' || !this.typeEnum[type]) {
+                _err('Type name must be on of ["' + _values(this.typeEnum).join('", "') + '"]');
+            }
+            return true;
+        },
 
-    /**
-     * 清除所有属性
-     *
-     * @param type
-     * @private
-     */
-    Button.prototype._clearProps = function (type) {
-        for (var i in this.propEnum) {
-            var propName = this.propEnum[i];
-            delete this[propName];
-        }
-    };
+        _clearProps: function (type) {
+            for (var i in this.propEnum) {
+                var propName = this.propEnum[i];
+                delete this[propName];
+            }
+        },
 
-    /**
-     * 检查type对应属性
-     *
-     * @param type
-     * @param props
-     * @returns {boolean}
-     * @private
-     */
-    Button.prototype._checkTypeProps = function (type, props) {
-        switch (type) {
-            case this.typeEnum.top:
-                var err = new Error('Sub button must be array.');
-                if (typeof props.sub_button !== 'object' || !props.sub_button.isArr()) {
-                    throw err;
-                }
-                for (var i = 0; i < props.sub_button.length; ++i) {
-                    if (!props.sub_button[i].isButton) {
+        _checkTypeProps: function (type, props) {
+            switch (type) {
+                case this.typeEnum.top:
+                    var err = new Error('Sub button must be array.');
+                    if (typeof props.sub_button !== 'object' || !_isArr(props.sub_button)) {
                         throw err;
                     }
-                }
-                break;
-            case this.typeEnum.click:
-                if (typeof props.key !== 'string') {
-                    throw new Error('Button key must be string.')
-                }
-                break;
-            case this.typeEnum.view:
-                if (typeof props.url !== 'string') {
-                    throw new Error('Button url must be string.')
-                }
-                break;
-            case this.typeEnum.miniprogram:
-                if (typeof props.url !== 'string') {
-                    throw new Error('Button url must be string.')
-                }
-                if (typeof props.appid !== 'string') {
-                    throw new Error('Button appid must be string.')
-                }
-                if (typeof props.pagepath !== 'string') {
-                    throw new Error('Button pagepath must be string.')
-                }
-                break;
+                    for (var i = 0; i < props.sub_button.length; ++i) {
+                        if (!props.sub_button[i].isButton) {
+                            throw err;
+                        }
+                    }
+                    break;
+                case this.typeEnum.click:
+                    if (typeof props.key !== 'string') {
+                        _err('Button key must be string.')
+                    }
+                    break;
+                case this.typeEnum.view:
+                    if (typeof props.url !== 'string') {
+                        _err('Button url must be string.')
+                    }
+                    break;
+                case this.typeEnum.miniprogram:
+                    if (typeof props.url !== 'string') {
+                        _err('Button url must be string.')
+                    }
+                    if (typeof props.appid !== 'string') {
+                        _err('Button appid must be string.')
+                    }
+                    if (typeof props.pagepath !== 'string') {
+                        _err('Button pagepath must be string.')
+                    }
+                    break;
+            }
+            return true;
+        },
+        setProps: function (type, props) {
+            this._checkType(type);
+            this._clearProps();
+            this._checkTypeProps(type, props);
+
+            this.type = type;
+            switch (this.type) {
+                case this.typeEnum.top:
+                    this.sub_button = props.sub_button;
+                    break;
+                case this.typeEnum.click:
+                    this.key = props.key;
+                    break;
+                case this.typeEnum.view:
+                    this.url = props.url;
+                    break;
+                case this.typeEnum.miniprogram:
+                    this.url = props.url;
+                    this.appid = props.appid;
+                    this.pagepath = props.pagepath;
+                    break;
+            }
+        },
+        getProps: function () {
+            switch (this.type) {
+                case this.typeEnum.top:
+                    var res = {};
+                    res.sub_button = [];
+                    for (var i = 0; i < this.sub_button.length; ++i) {
+                        res.sub_button.push(this.sub_button[i].toObj());
+                    }
+                    return res;
+                case this.typeEnum.click:
+                    return {
+                        type: this.type
+                        , key: this.key
+                        , sub_button: []
+                    };
+                case this.typeEnum.view:
+                    return {
+                        type: this.type
+                        , url: this.url
+                        , sub_button: []
+                    };
+                case this.typeEnum.miniprogram:
+                    return {
+                        type: this.type
+                        , url: this.url
+                        , appid: this.appid
+                        , pagepath: this.pagepath
+                        , sub_button: []
+                    };
+            }
+        },
+        pushSubButton: function (subButton) {
+            if (this.type !== 'top') {
+                _err('Only top node can add sub button.');
+            }
+            this.sub_button[this.sub_button.length] = subButton;
+        },
+        toObj: function () {
+            var resObj = {
+                name: this.name,
+            };
+            Object.assign(resObj, this.getProps());
+            return resObj;
+        },
+        isTop: function () {
+            return this.type === this.typeEnum.top;
+        },
+        isLeaf: function () {
+            return !this.sub_button || this.sub_button.length === 0;
+        },
+        toJson: function () {
+            return JSON.stringify(this.toObj());
+        },
+        moveChild: function (oldIdx, newIdx) {
+            if (this.isLeaf() || oldIdx >= this.sub_button.length || newIdx >= this.sub_button.length) {
+                _err('Sub button idx out of range.');
+            }
+            var button = this.sub_button.splice(oldIdx, 1)[0];
+            this.sub_button.splice(newIdx, 0, button);
         }
-        return true;
-    };
-
-    /**
-     * 设置按钮类型相关属性
-     *
-     * @param type
-     * @param props
-     */
-    Button.prototype.setProps = function (type, props) {
-        this._checkType(type);
-        this._clearProps();
-        this._checkTypeProps(type, props);
-
-        switch (this.type) {
-            case this.typeEnum.top:
-                this.type = type;
-                this.sub_button = props.sub_button;
-                break;
-            case this.typeEnum.click:
-                this.type = type;
-                this.key = props.key;
-                break;
-            case this.typeEnum.view:
-                this.type = type;
-                this.url = props.url;
-                break;
-            case this.typeEnum.miniprogram:
-                this.type = type;
-                this.url = props.url;
-                this.appid = props.appid;
-                this.pagepath = props.pagepath;
-                break;
-        }
-    };
-
-    /**
-     * 获取按钮类型相关属性
-     *
-     * @returns {*}
-     */
-    Button.prototype.getProps = function () {
-        switch (this.type) {
-            case this.typeEnum.top:
-                var res = {};
-                res.sub_button = [];
-                for (var i = 0; i < this.sub_button.length; ++i) {
-                    res.sub_button.push(this.sub_button[i].toObj());
-                }
-                return res;
-            case this.typeEnum.click:
-                return {
-                    type: this.type
-                    , key: this.key
-                    , sub_button: []
-                };
-            case this.typeEnum.view:
-                return {
-                    type: this.type
-                    , url: this.url
-                    , sub_button: []
-                };
-            case this.typeEnum.miniprogram:
-                return {
-                    type: this.type
-                    , url: this.url
-                    , appid: this.appid
-                    , pagepath: this.pagepath
-                    , sub_button: []
-                };
-        }
-    };
-
-    /**
-     * 增加子按钮
-     *
-     * @param subButton
-     */
-    Button.prototype.pushSubButton = function (subButton) {
-        if (this.type !== 'top') {
-            throw new Error('Only top node can add sub button.');
-        }
-        this.sub_button[this.sub_button.length] = subButton;
-    };
-
-    /**
-     * 获取按钮所有属性
-     *
-     * @returns {{name: *, type: *, ...}}
-     */
-    Button.prototype.toObj = function () {
-        var resObj = {
-            name: this.name,
-        };
-        Object.assign(resObj, this.getProps());
-        return resObj;
-    };
-
-    /**
-     * 是否顶级菜单
-     *
-     * @returns {boolean}
-     */
-    Button.prototype.isTop = function() {
-        return this.type === this.typeEnum.top;
-    };
-
-    /**
-     * 是否叶子节点
-     *
-     * @returns {boolean}
-     */
-    Button.prototype.isLeaf = function() {
-        return !this.sub_button || this.sub_button.length === 0;
-    };
-
-    /**
-     * 获取按钮对应json
-     *
-     * @returns {string}
-     */
-    Button.prototype.toJson = function () {
-        return JSON.stringify(this.toObj());
-    };
-
-    /**
-     * 移动子button
-     *
-     * @param oldIdx
-     * @param newIdx
-     */
-    Button.prototype.moveChild = function (oldIdx, newIdx) {
-        if(this.isLeaf() || oldIdx >= this.sub_button.length || newIdx >= this.sub_button.length){
-            throw new Error('Sub button idx out of range.');
-        }
-        var button = this.sub_button.splice(oldIdx, 1)[0];
-        this.sub_button.splice(newIdx, 0, button);
     };
 
     /**
@@ -310,16 +308,16 @@
      */
     function Menu(button) {
         this.isMenu = true;
-        if(button.isArr()) {
-            if(this && this._checkButtons(button)){
+        if (_isArr(button)) {
+            if (this && this._checkButtons(button)) {
                 this.button = button;
             } else {
                 this._fillWithObject(button);
             }
-        } else if(typeof button === 'string'){
+        } else if (typeof button === 'string') {
             var menuObj = JSON.parse(button);
             var buttonObj;
-            if(menuObj.button) {
+            if (menuObj.button) {
                 buttonObj = menuObj.button;
             } else {
                 buttonObj = menuObj;
@@ -334,291 +332,302 @@
      * @param button
      * @private
      */
-    Menu.prototype._checkButtons = function (button) {
-        for (var i = 0; i < button.length; ++i) {
-            if (!button[i].isButton) {
-                return false
-            }
-        }
-        return true;
-    };
-
-    Menu.prototype._fillWithObject = function (button) {
-        this.button = [];
-        for (var i = 0; i < button.length; ++i) {
-            if(!button[i].type && button[i].sub_button && button[i].sub_button.isArr()) {
-                button[i].type = 'top';
-                var topBtnSubBtn = [];
-                for (var j = 0; j < button[i].sub_button.length; ++j){
-                    var subBtnInfo = button[i].sub_button[j];
-                    var subBtn = new Button(subBtnInfo.name, subBtnInfo.type, subBtnInfo);
-                    topBtnSubBtn.push(subBtn);
+    Menu.prototype = {
+        _checkButtons : function (button) {
+            for (var i = 0; i < button.length; ++i) {
+                if (!button[i].isButton) {
+                    return false
                 }
-                this.button.push(new Button(button[i].name, button[i].type, {sub_button: topBtnSubBtn}));
-            } else {
-                this.button.push(new Button(button[i].name, button[i].type, button[i]));
             }
-        }
-    };
-
-    /**
-     * 增加子按钮
-     *
-     * @param button
-     */
-    Menu.prototype.pushButton = function (button) {
-        if (!button.isButton) {
-            throw new Error('Button list must be an array of Button');
-        }
-        this.button.push(button);
-    };
-
-    /**
-     * 转为obj
-     *
-     * @returns {{button: Array}}
-     */
-    Menu.prototype.toObj = function () {
-        var res = {button: []};
-        for (var i = 0; i < this.button.length; ++i) {
-            res.button.push(this.button[i].toObj())
-        }
-        return res;
-    };
-
-    /**
-     * 转为json
-     *
-     * @returns {string}
-     */
-    Menu.prototype.toJson = function () {
-        return JSON.stringify(this.toObj());
-    };
-
-    /**
-     * 获取（子）菜单长度
-     *
-     * @param topIdx
-     * @returns {*}
-     */
-    Menu.prototype.len = function(topIdx) {
-        if(!topIdx){
-            return this.button.length;
-        }
-        if(topIdx >= this.button.length) {
-            throw new Error('TopIdx out of range.');
-        }
-        if(this.button[topIdx].isLeaf()) {
-            throw new Error('Button topIdx has no sub button.');
-        }
-        return this.button[topIdx].sub_button.length;
-    };
-
-    /**
-     * 移动顶级菜单
-     *
-     * @param oldTopIdx
-     * @param newTopIdx
-     */
-    Menu.prototype.moveTopButton = function(oldTopIdx, newTopIdx) {
-        if(Math.max(oldTopIdx, newTopIdx) >= this.len()) {
-            throw new Error('Top button idx out of range.');
-        }
-        var button = this.button.splice(oldTopIdx, 1)[0];
-        this.button.splice(newTopIdx, 0, button);
-    };
-
-    /**
-     * 移动子菜单
-     *
-     * @param topIdx
-     * @param oldSubIdx
-     * @param newTopIdx
-     */
-    Menu.prototype.moveSubButton = function(topIdx, oldSubIdx, newTopIdx) {
-        if(topIdx >= this.button.length){
-            throw new Error('Button topIdx is not top button');
-        }
-
-        this.button[topIdx].moveChild(oldSubIdx, newTopIdx);
-    };
-
-    var addSubBtnElCls = 'custom-menu-view__menu__sub__add text-ellipsis';
-    var addTopBtnElCls = 'custom-menu-view__menu glyphicon glyphicon-plus text-info iBtn';
-    var subBtnElCls = 'custom-menu-view__menu__sub__add';
-    var topBtnElCls = 'custom-menu-view__menu';
-    var topBtnNameElCls = 'text-ellipsis';
-    var subBtnUlCls = 'custom-menu-view__menu__sub';
-    var topBtnUlCls = 'custom-menu-view__footer__right';
-
-    var selectedBtnCls = 'subbutton__actived';
-
-    var topBtnUlId = 'menu-view';
-
-    var addSubBtnElTag = 'li';
-    var addTopBtnElTag = 'div';
-    var subBtnElTag = 'li';
-    var subBtnUlTag = 'ul';
-    var topBtnElTag = 'div';
-    var topBtnNameElTag = 'div';
-
-    var idxAttrName = 'wechat-menu-idx';
-    var idxDelimiter = '-';
-    var addBtnAttrName = 'wechat-menu-add-btn';
-
-    Object.prototype.setMenuIdx = function (idx1, idx2) {
-        var idx = idx1 + (idx2 !== undefined ? idxDelimiter + idx2 : '');
-        this.setAttribute(idxAttrName, idx);
-    };
-
-    Object.prototype.getMenuIdx = function () {
-        var idx = this.getAttribute(idxAttrName);
-        return idx.split(idxDelimiter);
-    };
-
-    Object.prototype.isAddBtn = function (is) {
-        if(is !== undefined){
-            if(is === true){
-                this.toggleAttribute(addBtnAttrName, true);
-            } else {
-                this.toggleAttribute(addBtnAttrName, false);
+            return true;
+        },
+        _fillWithObject: function (button) {
+            this.button = [];
+            for (var i = 0; i < button.length; ++i) {
+                if (!button[i].type && button[i].sub_button && _isArr(button[i].sub_button)) {
+                    button[i].type = 'top';
+                    var topBtnSubBtn = [];
+                    for (var j = 0; j < button[i].sub_button.length; ++j) {
+                        var subBtnInfo = button[i].sub_button[j];
+                        var subBtn = new Button(subBtnInfo.name, subBtnInfo.type, subBtnInfo);
+                        topBtnSubBtn.push(subBtn);
+                    }
+                    this.button.push(new Button(button[i].name, button[i].type, {sub_button: topBtnSubBtn}));
+                } else {
+                    this.button.push(new Button(button[i].name, button[i].type, button[i]));
+                }
             }
+        },
+        pushButton: function (button) {
+            if (!button.isButton) {
+                _err('Button list must be an array of Button');
+            }
+            this.button.push(button);
+        },
+        toObj: function () {
+            var res = {button: []};
+            for (var i = 0; i < this.button.length; ++i) {
+                res.button.push(this.button[i].toObj())
+            }
+            return res;
+        },
+        toJson: function () {
+            return JSON.stringify(this.toObj());
+        },
+        len: function (topIdx) {
+            if (!topIdx) {
+                return this.button.length;
+            }
+            if (topIdx >= this.button.length) {
+                _err('TopIdx out of range.');
+            }
+            if (this.button[topIdx].isLeaf()) {
+                _err('Button topIdx has no sub button.');
+            }
+            return this.button[topIdx].sub_button.length;
+        },
+        moveTopButton: function (oldTopIdx, newTopIdx) {
+            if (Math.max(oldTopIdx, newTopIdx) >= this.len()) {
+                _err('Top button idx out of range.');
+            }
+            var button = this.button.splice(oldTopIdx, 1)[0];
+            this.button.splice(newTopIdx, 0, button);
+        },
+        moveSubButton: function (topIdx, oldSubIdx, newTopIdx) {
+            if (topIdx >= this.button.length) {
+                _err('Button topIdx is not top button');
+            }
+
+            this.button[topIdx].moveChild(oldSubIdx, newTopIdx);
+        },
+        get: function (topIdx, subIdx) {
+            var btn = this.button[topIdx];
+            btn = subIdx ? btn.sub_button[subIdx]: btn;
+            return btn.toObj();
         }
-        return this.hasAttribute(addBtnAttrName);
     };
 
-    function MenuView(menu) {
+    function MenuView(menu, options) {
         if(!menu.isMenu){
-            throw new Error('Menu must be a object of Menu');
+            _err('Menu must be a object of Menu');
         }
-        this.menu = menu;
 
-        this.topBtnUl = document.getElementById(topBtnUlId);
-        this.topBtnUl.className = topBtnUlCls;
+        this.menu = menu;  // menu obj
+        this.options = options = _extend({}, options);
+
+        this.el = document.getElementById(containerId);  // root element
+        this.el[expando] = this; // Export instance
+
+        // Default options
+        var defaults = {
+            clickBtn: function (btnIdx, btnInfo) {
+                console.log(btnIdx, btnInfo);
+            }
+        };
+
+        // Set default options
+        for (var name in defaults) {
+            !(name in options) && (options[name] = defaults[name]);
+        }
+
+        this.selectedBtn = null;
+        this.el.className = topBtnUlCls;
+        this.el.addEventListener('click', function (evt) {
+            var menuView = this[expando],
+                el = evt.target,
+                idx = _getMenuIdx(el);
+            if(_isCreateBtn(el)) {
+                var name = '新建菜单';
+                var type = 'view';
+                var props = {url: 'http://xueersi.com'};
+                if(_isTopBtn(el)) {
+                    menuView.menu.button.push(new Button(name, type, props));
+                    menuView.appendTopBtn(name, true);
+                    if(menuView.menu.button.length >= 3){
+                        el.parentElement.remove();
+                    }
+                    menuView.reIndex();
+                } else {
+                    if(menuView.menu.button[idx[0]].type !== 'top'){
+                        menuView.menu.button[idx[0]].setProps('top', {sub_button: [new Button(name, type, props)]});
+                    } else {
+                        menuView.menu.button[idx[0]].sub_button.push(new Button(name, type, props));
+                    }
+                    menuView.appendSubBtn(idx[0], name);
+                    if(menuView.menu.button[idx[0]].sub_button.length >= 5){
+                        el.remove();
+                    }
+                    menuView.reIndex();
+                }
+            } else if (_isBtn(el)) {
+                if (menuView.selectedBtn) {
+                    _toggleClass(menuView.selectedBtn, selectedBtnElCls, false);
+                }
+                _toggleClass(el, selectedBtnElCls, true);
+                menuView.selectedBtn = el;
+
+                menuView.options.clickBtn(idx, menuView.menu.get(...idx));
+            }
+        });
 
         for (var i = 0; i < menu.button.length; ++i ) {
-            var topBtn = this.createTopBtn(menu.button[i].name);
-            var subBtnUl = this.createSubBtnUl();
-            topBtn.appendChild(subBtnUl);
+            this.appendTopBtn(menu.button[i].name);
+            var subBtnUl = this._getSubBtnUl(i);
             for (var j = 0; menu.button[i].sub_button && j < menu.button[i].sub_button.length; ++j){
                 subBtnUl.appendChild(this.createSubBtn(menu.button[i].sub_button[j].name));
             }
             if(!menu.button[i].sub_button || menu.button[i].sub_button.length < 5) {
-                subBtnUl.appendChild(this.createAddSubBtn());
+                this.appendCreateSubBtn(i);
             }
-            this.topBtnUl.appendChild(topBtn);
         }
         if(menu.button.length < 3) {
-            this.topBtnUl.appendChild(this.createAddTopBtn());
+            this.el.appendChild(this.__createAddTopBtn());
         }
         this.reIndex();
     }
 
-    MenuView.prototype.createTopBtn = function(name) {
-        var topBtn = document.createElement(topBtnElTag);
-        topBtn.className = topBtnElCls;
-        var topBtnNameEl = document.createElement(topBtnNameElTag);
-        topBtnNameEl.className = topBtnNameElCls;
-        topBtnNameEl.innerHTML = name;
-        topBtnNameEl.click = function() {
-            console.log(this);
-            this.a.classList.add(selectedBtnCls);
-        };
-        topBtn.appendChild(topBtnNameEl);
-        return topBtn;
-    };
-
-    MenuView.prototype.createSubBtnUl = function() {
-        var subBtnUl = document.createElement(subBtnUlTag);
-        subBtnUl.className = subBtnUlCls;
-        return subBtnUl;
-    };
-
-    MenuView.prototype.createSubBtn = function(name) {
-        var subBtnEl = document.createElement(subBtnElTag);
-        subBtnEl.className = subBtnElCls;
-        subBtnEl.innerHTML = name;
-        return subBtnEl;
-    };
-
-    MenuView.prototype.createAddSubBtn = function() {
-        var addSubBtnEl = document.createElement(addSubBtnElTag);
-        addSubBtnEl.className = addSubBtnElCls;
-        addSubBtnEl.isAddBtn(true);
-        return addSubBtnEl;
-    };
-
-    MenuView.prototype.createAddTopBtn = function() {
-        var addTopBtnEl = document.createElement(addTopBtnElTag);
-        addTopBtnEl.className = addTopBtnElCls;
-        addTopBtnEl.isAddBtn(true);
-        this.topBtnUl.appendChild(addTopBtnEl);
-        return addTopBtnEl;
-    };
-
-    MenuView.prototype._getSubBtnUl = function(topBtnIdx) {
-        return this.topBtnUl.children[topBtnIdx].children[1];
-    };
-
-    MenuView.prototype.reIndex = function(topBtnUl){
-        for (var i = 0; i < this.topBtnUl.children.length; ++i){
-            var topBtnEl = this.topBtnUl.children[i];
-            if(topBtnEl.isAddBtn()) continue;
-            topBtnEl.setMenuIdx(i);
-            var subBtnUl = this._getSubBtnUl(i);
-            for (var j = 0; subBtnUl && j < subBtnUl.children.length; ++j){
-                if(subBtnUl.children[j].isAddBtn()) continue;
-                subBtnUl.children[j].setMenuIdx(i, j);
+    MenuView.prototype = {
+        appendTopBtn: function (name, withCreat) {
+            var topBtn = this.__createTopBtn(name);
+            var subBtnUl = this.createSubBtnUl();
+            topBtn.appendChild(subBtnUl);
+            if(withCreat){
+                subBtnUl.appendChild(this.__createAddSubBtn());
             }
-        }
-    };
+            this.el.appendChild(topBtn);
+        },
+        __createTopBtn: function (name) {
+            var topBtn = document.createElement(topBtnElTag);
+            topBtn.className = topBtnElCls;
+            var topBtnNameEl = document.createElement(topBtnNameElTag);
+            topBtnNameEl.className = topBtnNameElCls;
+            topBtnNameEl.innerHTML = name;
+            _isBtn(topBtnNameEl, true);
+            _isTopBtn(topBtnNameEl, true);
+            topBtn.appendChild(topBtnNameEl);
+            return topBtn;
+        },
+        appendCreateSubBtn: function(topIdx) {
+            var subBtnIdx = this._getSubBtnUl(topIdx);
+            subBtnIdx.appendChild(this.__createAddSubBtn());
+        },
+        appendSubBtn: function(topIdx, name){
+            var subBtnIdx = this._getSubBtnUl(topIdx);
+            subBtnIdx.appendChild(this.createSubBtn(name));
+        },
 
-    MenuView.prototype.sortable = function(newStatus){
-        if(newStatus) {
-            this._displayAddBtnEl(false);
-            var that = this;
-            this.sortableUlArr = [];
-            this.sortableUlArr.push(new Sortable(this.topBtnUl, {
-                animation: 300,
-                disabled: false,
-                onEnd: function (evt) {
-                    that.menu.moveTopButton(evt.oldIndex, evt.newIndex);
-                    that.reIndex();
-                }
-            }));
-            for (var i = 0; i < this.topBtnUl.children.length; ++i){
+        createSubBtnUl: function () {
+            var subBtnUl = document.createElement(subBtnUlTag);
+            subBtnUl.className = subBtnUlCls;
+            return subBtnUl;
+        },
+
+        createSubBtn: function (name) {
+            var subBtnEl = document.createElement(subBtnElTag);
+            subBtnEl.className = subBtnElCls;
+            subBtnEl.innerHTML = name;
+            _isBtn(subBtnEl, true);
+            return subBtnEl;
+        },
+
+        __createAddSubBtn: function () {
+            var addSubBtnEl = document.createElement(addSubBtnElTag);
+            addSubBtnEl.className = createSubBtnElCls;
+            _isCreateBtn(addSubBtnEl, true);
+            return addSubBtnEl;
+        },
+
+        __createAddTopBtn: function () {
+            var addTopBtnEl = document.createElement(addTopBtnElTag);
+            addTopBtnEl.className = createTopBtnElCls;
+            var addTopBtnNameEl = document.createElement(topBtnNameElTag);
+            addTopBtnNameEl.className = createTopBtnNameElCls;
+            addTopBtnNameEl.innerHTML = 'new';
+            addTopBtnEl.appendChild(addTopBtnNameEl);
+            _isCreateBtn(addTopBtnNameEl, true);
+            _isTopBtn(addTopBtnNameEl, true);
+            this.el.appendChild(addTopBtnEl);
+            return addTopBtnEl;
+        },
+
+        _getSubBtnUl: function (topBtnIdx) {
+            return this.el.children[topBtnIdx].children[1];
+        },
+
+        _getBtnEl: function (topIdx, subIdx) {
+            if (topIdx >= this.el.children.length) {
+                _err('TopBtnIdx out of range.');
+            }
+            if (subIdx === undefined) {
+                return this.el.children[topIdx].children[0];
+            }
+            var subBtnUl = this._getSubBtnUl(topIdx);
+            if (subIdx >= subBtnUl.children.length) {
+                _err('subIdx out of range.');
+            }
+            return subBtnUl.children[subIdx];
+        },
+
+        reIndex: function (topBtnUl) {
+            for (var i = 0; i < this.el.children.length; ++i) {
+                var topBtnEl = this.el.children[i];
+                // if (_isCreateBtn(topBtnEl)) continue;
+                _setMenuIdx(topBtnEl.children[0], i);
                 var subBtnUl = this._getSubBtnUl(i);
-                if(subBtnUl && subBtnUl.children.length > 0) {
-                    this.sortableUlArr.push(new Sortable(subBtnUl, {
-                        animation: 300,
-                        disabled: false,
-                        onEnd: function (evt) {
-                            that.menu.moveSubButton(evt.item.getMenuIdx()[0], evt.oldIndex, evt.newIndex);
-                            that.reIndex();
-                        }
-                    }));
+                for (var j = 0; subBtnUl && j < subBtnUl.children.length; ++j) {
+                    // if (_isCreateBtn(subBtnUl.children[j])) continue;
+                    _setMenuIdx(subBtnUl.children[j], i, j);
                 }
             }
-        } else {
-            var el = $('.custom-menu-view__footer__right')[0];
-            var sortableUl;
-            while (this.sortableUlArr && (sortableUl = this.sortableUlArr.pop())) {
-                sortableUl.destroy();
-            }
-            this._displayAddBtnEl(true);
-        }
-    };
+        },
 
-    MenuView.prototype._displayAddBtnEl = function (display) {
-        if(this.topBtnUl.lastChild.isAddBtn()){
-            this.topBtnUl.lastChild.style.display = display ? null: 'none';
-        }
-        for (var i = 0; this.topBtnUl.children && i < this.topBtnUl.children.length; ++i){
-            var subBtnUl = this._getSubBtnUl(i);
-            if(subBtnUl && subBtnUl.lastChild.isAddBtn()){
-                subBtnUl.lastChild.style.display = display ? null: 'none';
+        sortable: function (newStatus) {
+            if (newStatus) {
+                this._displayAddBtnEl(false);
+                var that = this;
+                this.sortableUlArr = [];
+                this.sortableUlArr.push(new Sortable(this.el, {
+                    animation: 300,
+                    disabled: false,
+                    onEnd: function (evt) {
+                        that.menu.moveTopButton(evt.oldIndex, evt.newIndex);
+                        that.reIndex();
+                    }
+                }));
+                for (var i = 0; i < this.el.children.length; ++i) {
+                    var subBtnUl = this._getSubBtnUl(i);
+                    if (subBtnUl && subBtnUl.children.length > 0) {
+                        this.sortableUlArr.push(new Sortable(subBtnUl, {
+                            animation: 300,
+                            disabled: false,
+                            onEnd: function (evt) {
+                                that.menu.moveSubButton(_getMenuIdx(evt.item)[0], evt.oldIndex, evt.newIndex);
+                                that.reIndex();
+                            }
+                        }));
+                    }
+                }
+            } else {
+                var el = $('.custom-menu-view__footer__right')[0];
+                var sortableUl;
+                while (this.sortableUlArr && (sortableUl = this.sortableUlArr.pop())) {
+                    sortableUl.destroy();
+                }
+                this._displayAddBtnEl(true);
             }
-        }
+        },
+
+        _displayAddBtnEl: function (display) {
+            if (_isCreateBtn(this.el.lastChild)) {
+                this.el.lastChild.style.display = display ? null : 'none';
+            }
+            for (var i = 0; this.el.children && i < this.el.children.length; ++i) {
+                var subBtnUl = this._getSubBtnUl(i);
+                if (subBtnUl && _isCreateBtn(subBtnUl.lastChild)) {
+                    subBtnUl.lastChild.style.display = display ? null : 'none';
+                }
+            }
+        },
     };
 
     // Export
