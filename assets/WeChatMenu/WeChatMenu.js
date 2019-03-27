@@ -40,7 +40,7 @@
         subBtnElCls = 'custom-menu-view__menu__sub__add',
         topBtnElCls = 'custom-menu-view__menu',
         topBtnNameElCls = 'text-ellipsis',
-        createSubBtnElCls = 'custom-menu-view__menu__sub__add text-ellipsis',
+        createSubBtnElCls = 'custom-menu-view__menu__sub__add text-ellipsis glyphicon glyphicon-plus text-info',
         createTopBtnElCls = 'custom-menu-view__menu',
         createTopBtnNameElCls = 'glyphicon glyphicon-plus text-info iBtn',
         selectedBtnElCls = 'subbutton__actived',
@@ -582,7 +582,6 @@
             addTopBtnEl.className = createTopBtnElCls;
             var addTopBtnNameEl = document.createElement(topBtnNameElTag);
             addTopBtnNameEl.className = createTopBtnNameElCls;
-            addTopBtnNameEl.innerHTML = 'new';
             addTopBtnEl.appendChild(addTopBtnNameEl);
             _isCreateBtn(addTopBtnNameEl, true);
             _isTopBtn(addTopBtnNameEl, true);
