@@ -26,7 +26,7 @@
     var
         /** @const */
         R_SPACE = /\s+/g,
-        expando = 'Sortable' + (new Date).getTime(),
+        expando = 'MenuView' + (new Date).getTime(),
 
         IDX_ATTR = 'wechat-menu-idx',
         IDX_DELIMIT = '-',
@@ -54,6 +54,9 @@
 
         containerId = 'menu-view',
 
+        clickBtn = function (btnIdx, btnInfo) {
+            console.log(btnIdx, btnInfo);
+        },
 
         /** @function */
         _toggleClass = function (el, name, state) {
@@ -77,20 +80,26 @@
             return res;
         },
 
-        // _keys = function(obj){
-        //     var res = [];
-        //     for (var key in obj) {
-        //         if (obj.hasOwnProperty(key)) {
-        //             res.push(key);
-        //         }
-        //     }
-        //     return res;
-        // },
-
         _isArr = function (obj) {
             return typeof obj === 'object' && obj.constructor.name === 'Array';
         },
 
+        _err = function (msg) {
+            throw new Error(msg);
+        },
+
+        _extend = function(dst, src) {
+            if (dst && src) {
+                for (var key in src) {
+                    if (src.hasOwnProperty(key)) {
+                        dst[key] = src[key];
+                    }
+                }
+            }
+            return dst;
+        },
+
+        /** @btnTypes */
         _isCreateBtn = function (el, state) {
             if (state) {
                 if (state === true) {
@@ -122,28 +131,12 @@
             return el.hasAttribute(TOP_BTN_TAG);
         },
 
+        /** @btnMenuIdx */
         _setMenuIdx = function (el, idxTop, idxSub) {
             el.setAttribute(IDX_ATTR, idxTop + (idxSub !== undefined ? IDX_DELIMIT + idxSub : ''));
         },
-
         _getMenuIdx = function (el) {
-            return el.getAttribute(IDX_ATTR).split(IDX_DELIMIT);
-        },
-
-        _err = function (msg) {
-            throw new Error(msg);
-        },
-
-        _extend = function(dst, src) {
-            if (dst && src) {
-                for (var key in src) {
-                    if (src.hasOwnProperty(key)) {
-                        dst[key] = src[key];
-                    }
-                }
-            }
-
-            return dst;
+            return el.hasAttribute(IDX_ATTR) ? el.getAttribute(IDX_ATTR).split(IDX_DELIMIT) : [];
         };
 
     function Button(name, type, props) {
@@ -409,26 +402,25 @@
 
     function MenuView(menu, options) {
         if(!menu.isMenu){
-            _err('Menu must be a object of Menu');
+            menu = new Menu(menu);
         }
 
         this.menu = menu;  // menu obj
         this.options = options = _extend({}, options);
 
-        this.el = document.getElementById(containerId);  // root element
-        this.el[expando] = this; // Export instance
-
         // Default options
         var defaults = {
-            clickBtn: function (btnIdx, btnInfo) {
-                console.log(btnIdx, btnInfo);
-            }
+            containerId: containerId,
+            clickBtn: clickBtn
         };
 
         // Set default options
         for (var name in defaults) {
             !(name in options) && (options[name] = defaults[name]);
         }
+
+        this.el = document.getElementById(this.options.containerId);  // root element
+        this.el[expando] = this; // Export instance
 
         this.selectedBtn = null;
         this.el.className = topBtnUlCls;
@@ -442,23 +434,23 @@
                 var props = {url: 'http://xueersi.com'};
                 if(_isTopBtn(el)) {
                     menuView.menu.button.push(new Button(name, type, props));
-                    menuView.appendTopBtn(name, true);
+                    menuView._appendTopBtn(name, true);
                     if(menuView.menu.button.length >= 3){
                         el.parentElement.remove();
                     }
-                    menuView.reIndex();
+                    menuView._reIndex();
                 } else {
                     if(menuView.menu.button[idx[0]].type !== 'top'){
                         menuView.menu.button[idx[0]].setProps('top', {sub_button: [new Button(name, type, props)]});
                     } else {
                         menuView.menu.button[idx[0]].sub_button.push(new Button(name, type, props));
                     }
-                    menuView.appendSubBtn(idx[0], name);
+                    menuView._appendSubBtn(idx[0], name);
                     el.remove();
                     if(menuView.menu.button[idx[0]].sub_button.length < 5){
-                        menuView.appendCreateSubBtn(idx[0]);
+                        menuView._appendCreateSubBtn(idx[0]);
                     }
-                    menuView.reIndex();
+                    menuView._reIndex();
                 }
             } else if (_isBtn(el)) {
                 if (menuView.selectedBtn) {
@@ -472,31 +464,76 @@
         });
 
         for (var i = 0; i < menu.button.length; ++i ) {
-            this.appendTopBtn(menu.button[i].name);
+            this._appendTopBtn(menu.button[i].name);
             var subBtnUl = this._getSubBtnUl(i);
             for (var j = 0; menu.button[i].sub_button && j < menu.button[i].sub_button.length; ++j){
-                subBtnUl.appendChild(this.createSubBtn(menu.button[i].sub_button[j].name));
+                subBtnUl.appendChild(this._createSubBtn(menu.button[i].sub_button[j].name));
             }
             if(!menu.button[i].sub_button || menu.button[i].sub_button.length < 5) {
-                this.appendCreateSubBtn(i);
+                this._appendCreateSubBtn(i);
             }
         }
         if(menu.button.length < 3) {
             this.el.appendChild(this.__createAddTopBtn());
         }
-        this.reIndex();
+        this._reIndex();
     }
 
     MenuView.prototype = {
-        appendTopBtn: function (name, withCreat) {
+        sortable: function (newStatus) {
+            if (newStatus) {
+                this._displayAddBtnEl(false);
+                var that = this;
+                this.sortableUlArr = [];
+                this.sortableUlArr.push(new Sortable(this.el, {
+                    animation: 300,
+                    disabled: false,
+                    onEnd: function (evt) {
+                        that.menu.moveTopButton(evt.oldIndex, evt.newIndex);
+                        that._reIndex();
+                    }
+                }));
+                for (var i = 0; i < this.el.children.length; ++i) {
+                    var subBtnUl = this._getSubBtnUl(i);
+                    if (subBtnUl && subBtnUl.children.length > 0) {
+                        this.sortableUlArr.push(new Sortable(subBtnUl, {
+                            animation: 300,
+                            disabled: false,
+                            onEnd: function (evt) {
+                                that.menu.moveSubButton(_getMenuIdx(evt.item)[0], evt.oldIndex, evt.newIndex);
+                                that._reIndex();
+                            }
+                        }));
+                    }
+                }
+            } else {
+                var el = $('.custom-menu-view__footer__right')[0];
+                var sortableUl;
+                while (this.sortableUlArr && (sortableUl = this.sortableUlArr.pop())) {
+                    sortableUl.destroy();
+                }
+                this._displayAddBtnEl(true);
+            }
+        },
+
+        getJson: function(){
+          this.menu.getJSON();
+        },
+
+        getObj: function(){
+          this.menu.getObj();
+        },
+
+        _appendTopBtn: function (name, withCreat) {
             var topBtn = this.__createTopBtn(name);
-            var subBtnUl = this.createSubBtnUl();
+            var subBtnUl = this._createSubBtnUl();
             topBtn.appendChild(subBtnUl);
             if(withCreat){
                 subBtnUl.appendChild(this.__createAddSubBtn());
             }
             this.el.appendChild(topBtn);
         },
+
         __createTopBtn: function (name) {
             var topBtn = document.createElement(topBtnElTag);
             topBtn.className = topBtnElCls;
@@ -508,22 +545,24 @@
             topBtn.appendChild(topBtnNameEl);
             return topBtn;
         },
-        appendCreateSubBtn: function(topIdx) {
+
+        _appendCreateSubBtn: function(topIdx) {
             var subBtnIdx = this._getSubBtnUl(topIdx);
             subBtnIdx.appendChild(this.__createAddSubBtn());
         },
-        appendSubBtn: function(topIdx, name){
+
+        _appendSubBtn: function(topIdx, name){
             var subBtnIdx = this._getSubBtnUl(topIdx);
-            subBtnIdx.appendChild(this.createSubBtn(name));
+            subBtnIdx.appendChild(this._createSubBtn(name));
         },
 
-        createSubBtnUl: function () {
+        _createSubBtnUl: function () {
             var subBtnUl = document.createElement(subBtnUlTag);
             subBtnUl.className = subBtnUlCls;
             return subBtnUl;
         },
 
-        createSubBtn: function (name) {
+        _createSubBtn: function (name) {
             var subBtnEl = document.createElement(subBtnElTag);
             subBtnEl.className = subBtnElCls;
             subBtnEl.innerHTML = name;
@@ -569,7 +608,7 @@
             return subBtnUl.children[subIdx];
         },
 
-        reIndex: function (topBtnUl) {
+        _reIndex: function (topBtnUl) {
             for (var i = 0; i < this.el.children.length; ++i) {
                 var topBtnEl = this.el.children[i];
                 // if (_isCreateBtn(topBtnEl)) continue;
@@ -579,42 +618,6 @@
                     // if (_isCreateBtn(subBtnUl.children[j])) continue;
                     _setMenuIdx(subBtnUl.children[j], i, j);
                 }
-            }
-        },
-
-        sortable: function (newStatus) {
-            if (newStatus) {
-                this._displayAddBtnEl(false);
-                var that = this;
-                this.sortableUlArr = [];
-                this.sortableUlArr.push(new Sortable(this.el, {
-                    animation: 300,
-                    disabled: false,
-                    onEnd: function (evt) {
-                        that.menu.moveTopButton(evt.oldIndex, evt.newIndex);
-                        that.reIndex();
-                    }
-                }));
-                for (var i = 0; i < this.el.children.length; ++i) {
-                    var subBtnUl = this._getSubBtnUl(i);
-                    if (subBtnUl && subBtnUl.children.length > 0) {
-                        this.sortableUlArr.push(new Sortable(subBtnUl, {
-                            animation: 300,
-                            disabled: false,
-                            onEnd: function (evt) {
-                                that.menu.moveSubButton(_getMenuIdx(evt.item)[0], evt.oldIndex, evt.newIndex);
-                                that.reIndex();
-                            }
-                        }));
-                    }
-                }
-            } else {
-                var el = $('.custom-menu-view__footer__right')[0];
-                var sortableUl;
-                while (this.sortableUlArr && (sortableUl = this.sortableUlArr.pop())) {
-                    sortableUl.destroy();
-                }
-                this._displayAddBtnEl(true);
             }
         },
 
