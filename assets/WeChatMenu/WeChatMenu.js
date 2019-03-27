@@ -454,8 +454,9 @@
                         menuView.menu.button[idx[0]].sub_button.push(new Button(name, type, props));
                     }
                     menuView.appendSubBtn(idx[0], name);
-                    if(menuView.menu.button[idx[0]].sub_button.length >= 5){
-                        el.remove();
+                    el.remove();
+                    if(menuView.menu.button[idx[0]].sub_button.length < 5){
+                        menuView.appendCreateSubBtn(idx[0]);
                     }
                     menuView.reIndex();
                 }
