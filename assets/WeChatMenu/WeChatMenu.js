@@ -54,7 +54,7 @@
 
         containerId = 'menu-view',
 
-        clickBtn = function (btnIdx, btnInfo) {
+        onSelect = function (btnIdx, btnInfo) {
             console.log(btnIdx, btnInfo);
         },
 
@@ -397,7 +397,19 @@
             var btn = this.button[topIdx];
             btn = subIdx ? btn.sub_button[subIdx]: btn;
             return btn.toObj();
-        }
+        },
+        del: function (topIdx, subIdx) {
+            if(topIdx !== undefined) {
+                if(subIdx !== undefined){
+                    var btn = this.button[topIdx];
+                    if(btn){
+                        btn.sub_button.splice(subIdx, 1);
+                    }
+                } else {
+                    this.button.splice(topIdx, 1);
+                }
+            }
+        },
     };
 
     function MenuView(menu, options) {
@@ -411,7 +423,7 @@
         // Default options
         var defaults = {
             containerId: containerId,
-            clickBtn: clickBtn
+            onSelect: onSelect,
         };
 
         // Set default options
@@ -434,9 +446,10 @@
                 var props = {url: 'http://xueersi.com'};
                 if(_isTopBtn(el)) {
                     menuView.menu.button.push(new Button(name, type, props));
+                    el.parentElement.remove();
                     menuView._appendTopBtn(name, true);
-                    if(menuView.menu.button.length >= 3){
-                        el.parentElement.remove();
+                    if(menuView.menu.button.length < 3){
+                        menuView._appendCreateTopBtn();
                     }
                     menuView._reIndex();
                 } else {
@@ -459,7 +472,7 @@
                 _toggleClass(el, selectedBtnElCls, true);
                 menuView.selectedBtn = el;
 
-                menuView.options.clickBtn(idx, menuView.menu.get(...idx));
+                menuView.options.onSelect(idx, menuView.menu.get(...idx));
             }
         });
 
@@ -474,7 +487,7 @@
             }
         }
         if(menu.button.length < 3) {
-            this.el.appendChild(this.__createAddTopBtn());
+            this._appendCreateTopBtn();
         }
         this._reIndex();
     }
@@ -516,12 +529,23 @@
             }
         },
 
-        getJson: function(){
-          this.menu.getJSON();
+        getBtn: function (topIdx, subIdx) {
+            if(topIdx !== undefined) {
+                if (subIdx === undefined) {
+                    return this.el.children[topIdx];
+                }
+                var subBtnUl = this._getSubBtnUl(topIdx);
+                return subBtnUl ? subBtnUl.children[subIdx] : subBtnUl;
+            }
         },
 
-        getObj: function(){
-          this.menu.getObj();
+        remove: function(topIdx, subIdx){
+            var btn = this.getBtn(topIdx, subIdx);
+            if(btn) {
+                btn.remove();
+                this.menu.del(topIdx,subIdx);
+                this._reIndex();
+            }
         },
 
         _appendTopBtn: function (name, withCreat) {
@@ -544,6 +568,10 @@
             _isTopBtn(topBtnNameEl, true);
             topBtn.appendChild(topBtnNameEl);
             return topBtn;
+        },
+
+        _appendCreateTopBtn: function() {
+            this.el.appendChild(this.__createAddTopBtn());
         },
 
         _appendCreateSubBtn: function(topIdx) {
@@ -590,31 +618,15 @@
         },
 
         _getSubBtnUl: function (topBtnIdx) {
-            return this.el.children[topBtnIdx].children[1];
-        },
-
-        _getBtnEl: function (topIdx, subIdx) {
-            if (topIdx >= this.el.children.length) {
-                _err('TopBtnIdx out of range.');
-            }
-            if (subIdx === undefined) {
-                return this.el.children[topIdx].children[0];
-            }
-            var subBtnUl = this._getSubBtnUl(topIdx);
-            if (subIdx >= subBtnUl.children.length) {
-                _err('subIdx out of range.');
-            }
-            return subBtnUl.children[subIdx];
+            return this.el.children[topBtnIdx] ? this.el.children[topBtnIdx].children[1] : undefined;
         },
 
         _reIndex: function (topBtnUl) {
             for (var i = 0; i < this.el.children.length; ++i) {
                 var topBtnEl = this.el.children[i];
-                // if (_isCreateBtn(topBtnEl)) continue;
                 _setMenuIdx(topBtnEl.children[0], i);
                 var subBtnUl = this._getSubBtnUl(i);
                 for (var j = 0; subBtnUl && j < subBtnUl.children.length; ++j) {
-                    // if (_isCreateBtn(subBtnUl.children[j])) continue;
                     _setMenuIdx(subBtnUl.children[j], i, j);
                 }
             }
