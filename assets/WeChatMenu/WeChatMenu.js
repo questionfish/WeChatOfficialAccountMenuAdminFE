@@ -435,46 +435,8 @@
         this.el[expando] = this; // Export instance
 
         this.selectedBtn = null;
-        this.el.className = topBtnUlCls;
-        this.el.addEventListener('click', function (evt) {
-            var menuView = this[expando],
-                el = evt.target,
-                idx = _getMenuIdx(el);
-            if(_isCreateBtn(el)) {
-                var name = '新建菜单';
-                var type = 'view';
-                var props = {url: 'http://xueersi.com'};
-                if(_isTopBtn(el)) {
-                    menuView.menu.button.push(new Button(name, type, props));
-                    el.parentElement.remove();
-                    menuView._appendTopBtn(name, true);
-                    if(menuView.menu.button.length < 3){
-                        menuView._appendCreateTopBtn();
-                    }
-                    menuView._reIndex();
-                } else {
-                    if(menuView.menu.button[idx[0]].type !== 'top'){
-                        menuView.menu.button[idx[0]].setProps('top', {sub_button: [new Button(name, type, props)]});
-                    } else {
-                        menuView.menu.button[idx[0]].sub_button.push(new Button(name, type, props));
-                    }
-                    menuView._appendSubBtn(idx[0], name);
-                    el.remove();
-                    if(menuView.menu.button[idx[0]].sub_button.length < 5){
-                        menuView._appendCreateSubBtn(idx[0]);
-                    }
-                    menuView._reIndex();
-                }
-            } else if (_isBtn(el)) {
-                if (menuView.selectedBtn) {
-                    _toggleClass(menuView.selectedBtn, selectedBtnElCls, false);
-                }
-                _toggleClass(el, selectedBtnElCls, true);
-                menuView.selectedBtn = el;
-
-                menuView.options.onSelect(idx, menuView.menu.get(...idx));
-            }
-        });
+        _toggleClass(this.el, 'topBtnUlCls', true);
+        this.el.addEventListener('click', _eventSelectBtn);
 
         for (var i = 0; i < menu.button.length; ++i ) {
             this._appendTopBtn(menu.button[i].name);
@@ -491,6 +453,46 @@
         }
         this._reIndex();
     }
+
+    var _eventSelectBtn = function (evt) {
+        var menuView = this[expando],
+            el = evt.target,
+            idx = _getMenuIdx(el);
+        if(_isCreateBtn(el)) {
+            var name = '新建菜单';
+            var type = 'view';
+            var props = {url: 'http://xueersi.com'};
+            if(_isTopBtn(el)) {
+                menuView.menu.button.push(new Button(name, type, props));
+                el.parentElement.remove();
+                menuView._appendTopBtn(name, true);
+                if(menuView.menu.button.length < 3){
+                    menuView._appendCreateTopBtn();
+                }
+                menuView._reIndex();
+            } else {
+                if(menuView.menu.button[idx[0]].type !== 'top'){
+                    menuView.menu.button[idx[0]].setProps('top', {sub_button: [new Button(name, type, props)]});
+                } else {
+                    menuView.menu.button[idx[0]].sub_button.push(new Button(name, type, props));
+                }
+                menuView._appendSubBtn(idx[0], name);
+                el.remove();
+                if(menuView.menu.button[idx[0]].sub_button.length < 5){
+                    menuView._appendCreateSubBtn(idx[0]);
+                }
+                menuView._reIndex();
+            }
+        } else if (_isBtn(el)) {
+            if (menuView.selectedBtn) {
+                _toggleClass(menuView.selectedBtn, selectedBtnElCls, false);
+            }
+            _toggleClass(el, selectedBtnElCls, true);
+            menuView.selectedBtn = el;
+
+            menuView.options.onSelect(idx, menuView.menu.get(...idx));
+        }
+    };
 
     MenuView.prototype = {
         sortable: function (newStatus) {
@@ -539,13 +541,27 @@
             }
         },
 
-        remove: function(topIdx, subIdx){
+        delBtn: function(topIdx, subIdx){
             var btn = this.getBtn(topIdx, subIdx);
             if(btn) {
                 btn.remove();
                 this.menu.del(topIdx,subIdx);
                 this._reIndex();
             }
+        },
+
+        destory: function(){
+            var el = this.el;
+
+            this.sortable(false);
+
+            el[expando] = null;
+            _toggleClass(el, 'topBtnUlCls', false);
+            el.removeEventListener('click', _eventSelectBtn);
+            el.innerHTML = '';
+
+            delete this.menu;
+            delete this;
         },
 
         _appendTopBtn: function (name, withCreat) {
