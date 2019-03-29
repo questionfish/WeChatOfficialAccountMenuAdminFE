@@ -101,6 +101,7 @@
 
         /** @btnTypes */
         _isCreateBtn = function (el, state) {
+            if (!el) return false;
             if (state) {
                 if (state === true) {
                     el.toggleAttribute(CREATE_BTN_TAG, true);
@@ -111,6 +112,7 @@
             return el.hasAttribute(CREATE_BTN_TAG);
         },
         _isBtn = function (el, state) {
+            if (!el) return false;
             if (state) {
                 if (state === true) {
                     el.toggleAttribute(BTN_TAG, true);
@@ -121,6 +123,7 @@
             return el.hasAttribute(BTN_TAG);
         },
         _isTopBtn = function (el, state) {
+            if (!el) return false;
             if (state) {
                 if (state === true) {
                     el.toggleAttribute(TOP_BTN_TAG, true);
@@ -368,14 +371,14 @@
             return JSON.stringify(this.toObj());
         },
         len: function (topIdx) {
-            if (!topIdx) {
+            if (topIdx === undefined) {
                 return this.button.length;
             }
             if (topIdx >= this.button.length) {
                 _err('TopIdx out of range.');
             }
             if (this.button[topIdx].isLeaf()) {
-                _err('Button topIdx has no sub button.');
+                return 0;
             }
             return this.button[topIdx].sub_button.length;
         },
@@ -495,8 +498,25 @@
     };
 
     MenuView.prototype = {
-        sortable: function (newStatus) {
-            if (newStatus) {
+        destory: function(){
+            var el = this.el;
+
+            this.sortable(false);
+
+            el[expando] = null;
+            _toggleClass(el, 'topBtnUlCls', false);
+            el.removeEventListener('click', _eventSelectBtn);
+            el.innerHTML = '';
+
+            delete this.menu;
+            delete this;
+        },
+
+        sortable: function (status) {
+            if(!(status ^ this.sortableStatus)) {
+                return;
+            }
+            if (status) {
                 this._displayAddBtnEl(false);
                 var that = this;
                 this.sortableUlArr = [];
@@ -529,6 +549,7 @@
                 }
                 this._displayAddBtnEl(true);
             }
+            this.sortableStatus = status;
         },
 
         getBtn: function (topIdx, subIdx) {
@@ -548,20 +569,6 @@
                 this.menu.del(topIdx,subIdx);
                 this._reIndex();
             }
-        },
-
-        destory: function(){
-            var el = this.el;
-
-            this.sortable(false);
-
-            el[expando] = null;
-            _toggleClass(el, 'topBtnUlCls', false);
-            el.removeEventListener('click', _eventSelectBtn);
-            el.innerHTML = '';
-
-            delete this.menu;
-            delete this;
         },
 
         _appendTopBtn: function (name, withCreat) {
@@ -649,13 +656,27 @@
         },
 
         _displayAddBtnEl: function (display) {
-            if (_isCreateBtn(this.el.lastChild.firstChild)) {
-                this.el.lastChild.style.display = display ? null : 'none';
-            }
-            for (var i = 0; this.el.children && i < this.el.children.length; ++i) {
-                var subBtnUl = this._getSubBtnUl(i);
-                if (subBtnUl && _isCreateBtn(subBtnUl.lastChild)) {
-                    subBtnUl.lastChild.style.display = display ? null : 'none';
+            var i;
+            var subBtnUl;
+            if(display === false) {
+                var lastTopBtn = this.el.lastChild;
+                if (_isCreateBtn(lastTopBtn.firstChild)) {
+                    lastTopBtn.remove();
+                }
+                for (i = 0; this.el.children && i < this.el.children.length; ++i) {
+                    subBtnUl = this._getSubBtnUl(i);
+                    if (subBtnUl && _isCreateBtn(subBtnUl.lastChild)) {
+                        subBtnUl.lastChild.remove();
+                    }
+                }
+            } else {
+                for (i = 0; this.el.children && i < this.el.children.length; ++i) {
+                    if(this.menu.len(i) < 5) {
+                        subBtnUl = this._appendCreateSubBtn(i);
+                    }
+                }
+                if(this.menu.len() < 3) {
+                    this._appendCreateTopBtn();
                 }
             }
         },
