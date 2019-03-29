@@ -546,7 +546,9 @@ div.first-right {
     padding: 0;
     margin: 0;
 }
-
+.custom-menu-view__footer * {
+    box-sizing: border-box;
+}
 .custom-menu-view__footer {
     position: absolute;
     height: 50px;
@@ -1831,39 +1833,6 @@ div.first-right {
     width: auto;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+.glyphicon-plus:before {
+    content: "\002b";
+}

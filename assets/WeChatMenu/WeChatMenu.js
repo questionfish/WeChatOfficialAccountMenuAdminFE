@@ -649,7 +649,7 @@
         },
 
         _displayAddBtnEl: function (display) {
-            if (_isCreateBtn(this.el.lastChild)) {
+            if (_isCreateBtn(this.el.lastChild.firstChild)) {
                 this.el.lastChild.style.display = display ? null : 'none';
             }
             for (var i = 0; this.el.children && i < this.el.children.length; ++i) {
